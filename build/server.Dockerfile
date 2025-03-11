@@ -19,7 +19,6 @@ RUN go mod download
 
 COPY cmd/server/ cmd/server/
 COPY internal/ internal/
-COPY pkg/ pkg/
 COPY --from=proto-builder /usr/src/app/pkg/proto pkg/proto
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o server ./cmd/server/main.go
