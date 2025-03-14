@@ -8,6 +8,7 @@ import (
 	"github.com/flohansen/coffee-table/pkg/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 //go:generate protoc --proto_path=../../proto --go_out=../../pkg/proto --go_opt=paths=source_relative --go-grpc_out=../../pkg/proto --go-grpc_opt=paths=source_relative chat.proto
@@ -52,15 +53,30 @@ func (s *Service) Broadcast(ctx context.Context, msg *proto.Message) (*proto.Bro
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	for username, conn := range s.streams {
-		if username == msg.Sender {
-			continue
-		}
-
-		if err := conn.Send(msg); err != nil {
+	for _, conn := range s.streams {
+		if err := conn.Send(&proto.Message{
+			Sender:   msg.Sender,
+			Text:     msg.Text,
+			TimeSent: timestamppb.Now(),
+		}); err != nil {
 			return &proto.BroadcastResponse{}, status.Error(codes.Internal, "error broadcasting message")
 		}
 	}
 
 	return &proto.BroadcastResponse{}, nil
+}
+
+func (s *Service) GetUsers(req *proto.GetUsersRequest, stream proto.ChatBroker_GetUsersServer) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	for username := range s.streams {
+		if err := stream.Send(&proto.User{
+			Username: username,
+		}); err != nil {
+			return status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	return nil
 }

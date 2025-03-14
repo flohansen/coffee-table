@@ -1,11 +1,14 @@
 syntax = "proto3";
 package coffee_table;
 
+import "google/protobuf/timestamp.proto";
+
 option go_package = "./pkg/proto";
 
 service ChatBroker {
     rpc Connect(ConnectRequest) returns (stream Message);
     rpc Broadcast(Message) returns (BroadcastResponse);
+    rpc GetUsers(GetUsersRequest) returns (stream User);
 }
 
 message ConnectRequest {
@@ -13,9 +16,17 @@ message ConnectRequest {
 }
 
 message Message {
-    string sender = 1;
-    string text = 2;
+    string                    sender    = 1;
+    string                    text      = 2;
+    google.protobuf.Timestamp time_sent = 3;
 }
 
 message BroadcastResponse {
+}
+
+message GetUsersRequest {
+}
+
+message User {
+    string username = 1;
 }
