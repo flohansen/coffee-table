@@ -10,19 +10,14 @@ import (
 )
 
 type CliView struct {
-	app          *tview.Application
-	userList     *tview.List
-	messageList  *tview.TextView
-	messageInput *tview.InputField
-	viewModel    *viewmodel.MainViewModel
+	app       *tview.Application
+	viewModel *viewmodel.MainViewModel
 }
 
 func NewCliView() *CliView {
 	view := &CliView{
-		app:          tview.NewApplication(),
-		messageInput: tview.NewInputField(),
-		userList:     tview.NewList(),
-		viewModel:    viewmodel.NewMainViewModel(),
+		app:       tview.NewApplication(),
+		viewModel: viewmodel.NewMainViewModel(),
 	}
 
 	loginView := view.NewLoginView()
@@ -37,28 +32,6 @@ func NewCliView() *CliView {
 		}
 	})
 
-	view.viewModel.Message.Bind(func(value string) {
-		view.messageInput.SetText(value)
-	})
-
-	view.viewModel.Users.Bind(func(value []*proto.User) {
-		view.userList.Clear()
-		for _, user := range value {
-			view.userList.AddItem(user.Username, "", ' ', nil)
-		}
-	})
-
-	view.viewModel.CurrentMessage.Bind(func(msg string) {
-		if msg == "" {
-			return
-		}
-
-		view.app.QueueUpdateDraw(func() {
-			fmt.Fprint(view.messageList, msg)
-			view.messageList.ScrollToEnd()
-		})
-	})
-
 	return view
 }
 
@@ -67,43 +40,76 @@ func (a *CliView) Run() error {
 }
 
 func (a *CliView) NewLoginView() tview.Primitive {
-	form := tview.NewForm()
-	form.SetBorder(true).
-		SetTitle("Login")
+	errorView := tview.NewTextView()
+	a.viewModel.Error.Bind(func(err string) {
+		if err == "" {
+			errorView.Clear()
+			return
+		}
 
-	form.AddInputField("Username: ", "", 0, nil, a.viewModel.UpdateUsername).
+		errorView.SetText(err)
+	})
+
+	form := tview.NewForm().
+		AddInputField("Username: ", "", 0, nil, a.viewModel.UpdateUsername).
 		AddInputField("Server URL: ", "", 0, nil, a.viewModel.UpdateServerURL).
 		AddButton("Connect", a.viewModel.Connect)
 
-	return form
+	flex := tview.NewFlex().
+		SetDirection(tview.FlexRow).
+		AddItem(errorView, 1, 3, false).
+		AddItem(form, 0, 1, true)
+	flex.SetBorder(true).SetTitle("Login")
+
+	return flex
 }
 
 func (a *CliView) NewChatView() tview.Primitive {
-	a.messageInput.SetLabel("Enter message: ").
+	messageInput := tview.NewInputField()
+	messageInput.SetLabel("Enter message: ").
 		SetLabelColor(tcell.ColorWhite).
 		SetDoneFunc(func(key tcell.Key) {
 			switch key {
 			case tcell.KeyEnter:
-				a.viewModel.SendMessage(a.messageInput.GetText())
+				a.viewModel.SendMessage(messageInput.GetText())
 			}
 		})
+	a.viewModel.Message.Bind(func(value string) {
+		messageInput.SetText(value)
+	})
 
-	a.messageList = tview.NewTextView().
+	messageList := tview.NewTextView().
 		SetDynamicColors(true)
-	a.messageList.SetBorder(true).
+	messageList.SetBorder(true).
 		SetTitle("Messages")
+	a.viewModel.CurrentMessage.Bind(func(msg string) {
+		if msg == "" {
+			return
+		}
 
-	a.userList.SetUseStyleTags(false, false)
-	a.userList.SetBorder(true).
+		a.app.QueueUpdateDraw(func() {
+			fmt.Fprint(messageList, msg)
+			messageList.ScrollToEnd()
+		})
+	})
+
+	userList := tview.NewList().SetUseStyleTags(false, false)
+	userList.SetBorder(true).
 		SetTitle("Users")
+	a.viewModel.Users.Bind(func(value []*proto.User) {
+		userList.Clear()
+		for _, user := range value {
+			userList.AddItem(user.Username, "", ' ', nil)
+		}
+	})
 
 	flex := tview.NewFlex().
 		SetDirection(tview.FlexRow).
 		AddItem(tview.NewFlex().
 			SetDirection(tview.FlexColumn).
-			AddItem(a.messageList, 0, 1, false).
-			AddItem(a.userList, 20, 0, false), 0, 1, false).
-		AddItem(a.messageInput, 3, 0, true)
+			AddItem(messageList, 0, 1, false).
+			AddItem(userList, 20, 0, false), 0, 1, false).
+		AddItem(messageInput, 3, 0, true)
 
 	return flex
 }

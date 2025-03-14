@@ -18,6 +18,7 @@ const (
 )
 
 type MainViewModel struct {
+	Error          *Observer[string]
 	CurrentMessage *Observer[string]
 	Users          *Observer[[]*proto.User]
 	Message        *Observer[string]
@@ -30,6 +31,7 @@ type MainViewModel struct {
 
 func NewMainViewModel() *MainViewModel {
 	return &MainViewModel{
+		Error:          NewObserver(""),
 		Message:        NewObserver(""),
 		CurrentView:    NewObserver(ViewLogin),
 		Users:          NewObserver([]*proto.User{}),
@@ -48,6 +50,7 @@ func (v *MainViewModel) UpdateServerURL(url string) {
 func (v *MainViewModel) Connect() {
 	client, err := grpc.NewClient(v.serverURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
+		v.Error.Set(err.Error())
 		return
 	}
 
@@ -56,6 +59,7 @@ func (v *MainViewModel) Connect() {
 		Username: v.username,
 	})
 	if err != nil {
+		v.Error.Set(err.Error())
 		return
 	}
 
