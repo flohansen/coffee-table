@@ -1,0 +1,114 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.22.x
+
+      - name: Setup tools
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
+
+      - name: Setup protoc
+        uses: arduino/setup-protoc@v1
+        with:
+          version: 3.x
+
+      - name: Setup project
+        run: |
+          make gen
+
+      - name: Run tests
+        run: |
+          make test
+
+  release:
+    needs: [test]
+    permissions:
+      contents: write
+    name: Release Binaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup tools
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
+
+      - name: Setup protoc
+        uses: arduino/setup-protoc@v1
+        with:
+          version: 3.x
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Get current tag
+        id: get_current_tag
+        run: |
+          git fetch --tags
+          current_tag=$(git tag -l --sort=-creatordate | head -n 1)
+          if [[ -z "$current_tag" ]]; then
+            current_tag="v0.0.0"
+          fi
+          echo "current_tag=$current_tag" >> $GITHUB_OUTPUT
+
+      - name: Get current commit type
+        id: get_current_commit_type
+        run: |
+          commit_type=$(git show -s --format=%s | awk -F ':' '{ print $1 }')
+          echo "commit_type=$commit_type" >> $GITHUB_OUTPUT
+
+      - name: Create new tag
+        id: create_new_tag
+        run: |
+          current_tag="${{ steps.get_current_tag.outputs.current_tag }}"
+          case "${{ steps.get_current_commit_type.outputs.commit_type }}" in
+            "fix")
+              new_tag=$(echo "$current_tag" | awk -F 'v' '{ print $2 }' | awk -F '.' '{ print "v" $1 "." $2 "." $3+1 }')
+              ;;
+            "feat")
+              new_tag=$(echo "$current_tag" | awk -F 'v' '{ print $2 }' | awk -F '.' '{ print "v" $1 "." $2+1 "." $3 }')
+              ;;
+            "BREAKING CHANGE")
+              new_tag=$(echo "$current_tag" | awk -F 'v' '{ print $2 }' | awk -F '.' '{ print "v" $1+1 "." $2 "." $3 }')
+              ;;
+          esac
+          echo "new_tag=$new_tag" >> $GITHUB_OUTPUT
+
+      - name: Create tag
+        if: steps.create_new_tag.outputs.new_tag != ''
+        run: |
+          git tag ${{ steps.create_new_tag.outputs.new_tag }}
+          git push origin ${{ steps.create_new_tag.outputs.new_tag }}
+
+      - name: Create release
+        if: steps.create_new_tag.outputs.new_tag != ''
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GORELEASER_CURRENT_TAG: ${{ steps.create_new_tag.outputs.new_tag }}
