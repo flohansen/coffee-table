@@ -127,5 +127,5 @@ jobs:
       - name: Docker push
         if: steps.create_new_tag.outputs.new_tag != ''
         run: |
-          docker build -t ghcr.io/flohansen/coffee-table-server:latest -f build/server.Dockerfile .
-          docker build -t ghcr.io/flohansen/coffee-table-server:${{ steps.create_new_tag.outputs.new_tag }} -f build/server.Dockerfile .
+          docker push ghcr.io/flohansen/coffee-table-server:latest
+          docker push ghcr.io/flohansen/coffee-table-server:${{ steps.create_new_tag.outputs.new_tag }}
