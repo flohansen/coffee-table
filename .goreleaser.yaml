@@ -36,13 +36,6 @@ archives:
       - goos: windows
         formats: [zip]
 
-dockers:
-  - id: coffee-table-server
-    dockerfile: build/server.Dockerfile
-    image_templates:
-      - "ghcr.io/flohansen/coffee-table-server:{{ .Tag }}"
-      - "ghcr.io/flohansen/coffee-table-server:latest"
-
 changelog:
   sort: asc
   filters:

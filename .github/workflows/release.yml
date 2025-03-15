@@ -112,3 +112,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GORELEASER_CURRENT_TAG: ${{ steps.create_new_tag.outputs.new_tag }}
+
+      - name: Login to GHCR
+        if: steps.create_new_tag.outputs.new_tag != ''
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u flohansen --password-stdin
+ 
+      - name: Docker build
+        if: steps.create_new_tag.outputs.new_tag != ''
+        run: |
+          docker build -t ghcr.io/flohansen/coffee-table-server:latest -f build/server.Dockerfile .
+          docker build -t ghcr.io/flohansen/coffee-table-server:${{ steps.create_new_tag.outputs.new_tag }} -f build/server.Dockerfile .
+ 
+      - name: Docker push
+        if: steps.create_new_tag.outputs.new_tag != ''
+        run: |
+          docker build -t ghcr.io/flohansen/coffee-table-server:latest -f build/server.Dockerfile .
+          docker build -t ghcr.io/flohansen/coffee-table-server:${{ steps.create_new_tag.outputs.new_tag }} -f build/server.Dockerfile .
