@@ -1,5 +1,5 @@
 FROM golang:1.22-alpine AS proto-builder
-RUN apk update && apk add protoc
+RUN apk update && apk add protobuf-dev
 RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
