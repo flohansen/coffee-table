@@ -31,15 +31,17 @@ builds:
 archives:
   - formats: [tar.gz]
     name_template: >-
-      {{ .ProjectName }}_
-      {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
-      {{- else }}{{ .Arch }}{{ end }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
+      {{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ .Arm }}
     format_overrides:
       - goos: windows
         formats: [zip]
+
+dockers:
+  - id: coffee-table-server
+    dockerfile: build/server.Dockerfile
+    image_templates:
+      - "ghcr.io/flohansen/coffee-table-server:{{ .Tag }}"
+      - "ghcr.io/flohansen/coffee-table-server:latest"
 
 changelog:
   sort: asc

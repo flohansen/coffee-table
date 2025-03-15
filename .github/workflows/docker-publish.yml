@@ -1,60 +1,60 @@
-name: Docker Publish
-
-on:
-  push:
-    branches:
-      - main
-
-jobs:
-  test:
-    name: Run Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: 1.22.x
-
-      - name: Setup tools
-        run: |
-          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
-          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
-
-      - name: Setup protoc
-        uses: arduino/setup-protoc@v1
-        with:
-          version: 3.x
-
-      - name: Setup project
-        run: |
-          make gen
-
-      - name: Run tests
-        run: |
-          make test
-
-  push-image:
-    name: Push Image
-    needs: [ test ]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Login to GHCR
-        run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u flohansen --password-stdin
-
-      - name: Docker build
-        run: |
-          docker build -t ghcr.io/flohansen/coffee-table-server:latest -f build/server.Dockerfile .
-
-      - name: Docker push
-        run: |
-          docker push ghcr.io/flohansen/coffee-table-server:latest
+# name: Docker Publish
+# 
+# on:
+#   push:
+#     branches:
+#       - main
+# 
+# jobs:
+#   test:
+#     name: Run Tests
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+# 
+#       - name: Setup Go
+#         uses: actions/setup-go@v4
+#         with:
+#           go-version: 1.22.x
+# 
+#       - name: Setup tools
+#         run: |
+#           go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
+#           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
+# 
+#       - name: Setup protoc
+#         uses: arduino/setup-protoc@v1
+#         with:
+#           version: 3.x
+# 
+#       - name: Setup project
+#         run: |
+#           make gen
+# 
+#       - name: Run tests
+#         run: |
+#           make test
+# 
+#   push-image:
+#     name: Push Image
+#     needs: [ test ]
+#     runs-on: ubuntu-latest
+#     permissions:
+#       contents: read
+#       packages: write
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+# 
+#       - name: Login to GHCR
+#         run: |
+#           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u flohansen --password-stdin
+# 
+#       - name: Docker build
+#         run: |
+#           docker build -t ghcr.io/flohansen/coffee-table-server:latest -f build/server.Dockerfile .
+# 
+#       - name: Docker push
+#         run: |
+#           docker push ghcr.io/flohansen/coffee-table-server:latest
