@@ -68,6 +68,8 @@ jobs:
       - name: Create new tag
         id: create_new_tag
         uses: flohansen/semver-action@v1
+        with:
+          output-name: new_tag
 
       - name: Create tag
         if: steps.create_new_tag.outputs.new_tag != ''
