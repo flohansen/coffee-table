@@ -2,11 +2,15 @@ package viewmodel
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/flohansen/coffee-table/pkg/proto"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
@@ -23,6 +27,7 @@ type MainViewModel struct {
 	Users          *Observer[[]*proto.User]
 	Message        *Observer[string]
 	CurrentView    *Observer[View]
+	Secure         *Observer[bool]
 	username       string
 	serverURL      string
 	client         proto.ChatBrokerClient
@@ -36,6 +41,7 @@ func NewMainViewModel() *MainViewModel {
 		CurrentView:    NewObserver(ViewLogin),
 		Users:          NewObserver([]*proto.User{}),
 		CurrentMessage: NewObserver(""),
+		Secure:         NewObserver(false),
 	}
 }
 
@@ -48,7 +54,29 @@ func (v *MainViewModel) UpdateServerURL(url string) {
 }
 
 func (v *MainViewModel) Connect() {
-	client, err := grpc.NewClient(v.serverURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	var clientOptions []grpc.DialOption
+
+	if v.Secure.Get() {
+		caPem, err := os.ReadFile("ca-cert.pem")
+		if err != nil {
+			v.Error.Set(err.Error())
+			return
+		}
+
+		certPool := x509.NewCertPool()
+		if !certPool.AppendCertsFromPEM(caPem) {
+			v.Error.Set("could not add CA's certificate")
+			return
+		}
+
+		clientOptions = append(clientOptions, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
+			RootCAs: certPool,
+		})))
+	} else {
+		clientOptions = append(clientOptions, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	}
+
+	client, err := grpc.NewClient(v.serverURL, clientOptions...)
 	if err != nil {
 		v.Error.Set(err.Error())
 		return

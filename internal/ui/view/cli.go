@@ -53,11 +53,12 @@ func (a *CliView) NewLoginView() tview.Primitive {
 	form := tview.NewForm().
 		AddInputField("Username: ", "", 0, nil, a.viewModel.UpdateUsername).
 		AddInputField("Server URL: ", "", 0, nil, a.viewModel.UpdateServerURL).
+		AddCheckbox("Secure", false, a.viewModel.Secure.Set).
 		AddButton("Connect", a.viewModel.Connect)
 
 	flex := tview.NewFlex().
 		SetDirection(tview.FlexRow).
-		AddItem(errorView, 1, 3, false).
+		AddItem(errorView, 2, 3, false).
 		AddItem(form, 0, 1, true)
 	flex.SetBorder(true).SetTitle("Login")
 
