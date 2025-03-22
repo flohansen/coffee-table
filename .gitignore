@@ -1,2 +1,10 @@
+# Generated protobuf code
 /pkg/proto/
+
+# Binaries created by goreleaser
 dist/
+
+# Self signed certificates
+*.pem
+*.cnf
+*.srl

@@ -11,6 +11,10 @@ gen:
 test: gen
 	go test ./... -race -cover
 
+.PHONY: cert
+cert:
+	scripts/cert-gen.sh
+
 .PHONY: clean
 clean:
 	rm -rf pkg/proto/ ./.git/hooks/pre-push
