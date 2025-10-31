@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"errors"
+	"net"
 	"net/http"
 	"time"
 )
@@ -44,8 +45,9 @@ func NewServer(opts ...ServerOption) *Server {
 // canceled, the server will be shutdown gracefully.
 func (s *Server) Serve(ctx context.Context) error {
 	srv := &http.Server{
-		Addr:    s.addr,
-		Handler: s.applyMiddlewares(),
+		Addr:        s.addr,
+		Handler:     s.applyMiddlewares(),
+		BaseContext: func(l net.Listener) context.Context { return ctx },
 	}
 
 	srvErr := make(chan error, 1)
