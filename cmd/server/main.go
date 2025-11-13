@@ -10,12 +10,11 @@ import (
 	"github.com/flohansen/coffee-table/internal/repository"
 	"github.com/flohansen/coffee-table/pkg/app"
 	pkghttp "github.com/flohansen/coffee-table/pkg/http"
+	"github.com/flohansen/coffee-table/pkg/logging"
 	"github.com/flohansen/coffee-table/sql/migrations"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-
-	"golang.org/x/sync/errgroup"
 )
 
 type config struct {
@@ -32,9 +31,12 @@ func main() {
 	flag.Parse()
 
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	g, ctx := errgroup.WithContext(app.SignalContext())
 
-	pool, err := pgxpool.New(ctx, config.Database)
+	stack := app.NewStack(
+		app.WithLogger(logging.NewLoggerFromSlog(log)),
+	)
+
+	pool, err := pgxpool.New(stack, config.Database)
 	if err != nil {
 		log.Error("failed to create pgx pool", "error", err)
 		os.Exit(1)
@@ -47,29 +49,29 @@ func main() {
 	userRepo := repository.NewUserPostgres(pool)
 	userController := controller.NewUserController(userRepo)
 
-	g.Go(func() error {
+	stack.Go(func() error {
 		log.Info("api server started", "addr", config.ListenAddr)
 		if err := pkghttp.NewServer(
 			pkghttp.WithListenAddr(config.ListenAddr),
 			pkghttp.WithHandler("POST /users/register", http.HandlerFunc(userController.Register)),
-		).Serve(ctx); err != nil {
+		).Serve(stack); err != nil {
 			return err
 		}
 		return nil
 	})
 
-	g.Go(func() error {
+	stack.Go(func() error {
 		log.Info("metrics server started", "addr", config.MetricsAddr)
 		if err := pkghttp.NewServer(
 			pkghttp.WithListenAddr(config.MetricsAddr),
 			pkghttp.WithHandler("/metrics", promhttp.Handler()),
-		).Serve(ctx); err != nil {
+		).Serve(stack); err != nil {
 			return err
 		}
 		return nil
 	})
 
-	if err := g.Wait(); err != nil {
+	if err := stack.Wait(); err != nil {
 		log.Error("application error", "error", err)
 		os.Exit(1)
 	}
