@@ -10,6 +10,7 @@ import (
 	"github.com/flohansen/coffee-table/internal/repository"
 	"github.com/flohansen/coffee-table/pkg/app"
 	pkghttp "github.com/flohansen/coffee-table/pkg/http"
+	"github.com/flohansen/coffee-table/sql/migrations"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -36,6 +37,10 @@ func main() {
 	pool, err := pgxpool.New(ctx, config.Database)
 	if err != nil {
 		log.Error("failed to create pgx pool", "error", err)
+		os.Exit(1)
+	}
+	if err := migrations.Up(pool); err != nil {
+		log.Error("failed to run migration", "error", err)
 		os.Exit(1)
 	}
 
